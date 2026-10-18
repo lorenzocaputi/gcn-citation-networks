@@ -1,11 +1,15 @@
-"""Training with the paper's settings."""
+"""Training with the paper's settings, and the label-propagation baseline."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 import torch.nn.functional as F
+from scipy import sparse
+from scipy.sparse import csgraph
+from scipy.sparse.linalg import spsolve
 
 from .data import Graph, normalized_adjacency
 from .models import GCN, MLP
@@ -99,3 +103,46 @@ def train(
         epochs=epoch,
     )
     return model, result
+
+
+def label_propagation(graph: Graph, class_mass: bool = True) -> Result:
+    """Harmonic-function label propagation (Zhu, Ghahramani and Lafferty, 2003).
+
+    Solves (D - A)_UU F_U = A_UL Y_L exactly for the unlabelled nodes U, using
+    only the training labels as L. With `class_mass`, each class column is
+    rescaled so that its total mass matches the class frequencies of the
+    training labels (class mass normalisation, from the same paper). A node in
+    a connected component without any training node gets no prediction and
+    counts as an error.
+    """
+    n, k = graph.num_nodes, graph.num_classes
+    src, dst = graph.edges.numpy()
+    adj = sparse.csr_matrix((np.ones(len(src)), (src, dst)), shape=(n, n))
+    train_nodes = graph.train.numpy()
+    _, component = csgraph.connected_components(adj, directed=False)
+    reachable = np.isin(component, component[train_nodes])
+    labelled = np.zeros(n, dtype=bool)
+    labelled[train_nodes] = True
+    unknown = np.flatnonzero(reachable & ~labelled)
+
+    seeds = np.zeros((len(train_nodes), k))
+    seeds[np.arange(len(train_nodes)), graph.labels.numpy()[train_nodes]] = 1.0
+    laplacian = sparse.diags(np.asarray(adj.sum(axis=1)).ravel()) - adj
+    rhs = adj[unknown][:, train_nodes] @ seeds
+    solution = spsolve(laplacian[unknown][:, unknown].tocsc(), rhs).reshape(len(unknown), k)
+    if class_mass:
+        solution = solution * (seeds.mean(axis=0) / solution.sum(axis=0))
+
+    predicted = np.full(n, -1)
+    predicted[train_nodes] = graph.labels.numpy()[train_nodes]
+    predicted[unknown] = solution.argmax(axis=1)
+    y = graph.labels.numpy()
+    test, val = graph.test.numpy(), graph.val.numpy()
+    return Result(
+        method="label_propagation" if class_mass else "label_propagation_plain",
+        dataset=graph.name,
+        seed=0,
+        test_acc=float((predicted[test] == y[test]).mean()),
+        val_acc=float((predicted[val] == y[val]).mean()),
+        epochs=0,
+    )

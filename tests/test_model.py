@@ -3,6 +3,7 @@ import torch
 from gcn import GCN, normalized_adjacency
 from gcn.data import Graph
 from gcn.models import sparse_dropout
+from gcn.train import label_propagation
 
 
 def toy_graph() -> Graph:
@@ -49,3 +50,8 @@ def test_sparse_dropout_keeps_zeros_and_rescales():
     kept = out[x == 1]
     assert set(kept.unique().tolist()) <= {0.0, 2.0}
     assert 0.4 < (kept > 0).float().mean() < 0.6
+
+
+def test_label_propagation_on_two_triangles():
+    result = label_propagation(toy_graph())
+    assert result.test_acc == 1.0
