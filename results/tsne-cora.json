@@ -1,0 +1,6 @@
+{
+ "seed": 0,
+ "test_acc": 0.812,
+ "knn10_same_class_raw": 0.5486,
+ "knn10_same_class_hidden": 0.7653
+}
