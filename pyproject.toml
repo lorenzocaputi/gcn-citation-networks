@@ -9,7 +9,7 @@ description = "Kipf and Welling's GCN in plain PyTorch, reproduced on Cora, Cite
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Lorenzo Caputi" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "torch>=2.2",
     "numpy>=1.26",
