@@ -3,9 +3,9 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "gcn-from-scratch"
+name = "gcn-citation-networks"
 version = "1.0.0"
-description = "Kipf and Welling's GCN in plain PyTorch, reproduced on Cora, CiteSeer and PubMed"
+description = "Graph convolutional networks in plain PyTorch, classifying the papers of the Cora, CiteSeer and PubMed citation networks"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Lorenzo Caputi" }]
